@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rest Client</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23232427'/%3E%3Cpath d='M4 5h8M4 8h5M4 11h7' stroke='%238a9bb0' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="side-head">
+      <span class="brand">Rest Client</span>
+      <button id="new-btn" class="ghost" title="New request">+ New</button>
+    </div>
+    <div class="tabs side-tabs">
+      <button data-side="saved" class="active">Saved</button>
+      <button data-side="history">History</button>
+    </div>
+    <input id="search" class="search" placeholder="Filter…" spellcheck="false">
+    <div id="side-list" class="side-list"></div>
+    <div class="side-foot">
+      <button id="clear-history" class="ghost small" hidden>Clear history</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <input id="req-name" class="req-name" spellcheck="false" placeholder="Untitled">
+      <span id="dirty" class="dirty" title="Unsaved changes" hidden></span>
+      <div class="spacer"></div>
+      <button id="curl-import" class="ghost" title="Paste a cURL command (or paste one straight into the URL bar)">Import cURL</button>
+      <button id="curl-copy" class="ghost" title="Copy this request as a cURL command">Copy as cURL</button>
+      <select id="env-select" title="Environment"></select>
+      <button id="env-edit" class="ghost" title="Edit environments">Environments</button>
+    </div>
+
+    <form id="req-bar" class="req-bar" autocomplete="off">
+      <select id="method"></select>
+      <input id="url" placeholder="https://api.example.com/users  ·  use {{var}} for environment variables" spellcheck="false">
+      <button id="send" type="submit" class="primary">Send</button>
+      <button id="save" type="button" title="Save request (Ctrl+S)">Save</button>
+    </form>
+
+    <div id="split" class="split">
+      <section class="pane req-pane">
+        <div class="tabs" id="req-tabs">
+          <button data-tab="params" class="active">Params <span class="count"></span></button>
+          <button data-tab="headers">Headers <span class="count"></span></button>
+          <button data-tab="body">Body</button>
+          <button data-tab="auth">Auth</button>
+        </div>
+        <div class="tab-body">
+          <div data-panel="params"></div>
+          <div data-panel="headers" hidden></div>
+          <div data-panel="body" hidden>
+            <div class="body-opts">
+              <label><input type="radio" name="body-type" value="none"> None</label>
+              <label><input type="radio" name="body-type" value="json"> JSON</label>
+              <label><input type="radio" name="body-type" value="text"> Text</label>
+              <label><input type="radio" name="body-type" value="form"> Form</label>
+              <div class="spacer"></div>
+              <button id="format-json" class="ghost small" type="button">Format</button>
+            </div>
+            <textarea id="body-text" class="code" spellcheck="false"></textarea>
+            <div id="body-form"></div>
+            <p id="body-none" class="muted center">This request has no body.</p>
+          </div>
+          <div data-panel="auth" hidden>
+            <div class="field">
+              <label for="auth-type">Type</label>
+              <select id="auth-type">
+                <option value="none">None</option>
+                <option value="bearer">Bearer token</option>
+                <option value="basic">Basic auth</option>
+              </select>
+            </div>
+            <div class="field" data-auth="bearer">
+              <label for="auth-token">Token</label>
+              <input id="auth-token" spellcheck="false" placeholder="{{token}}">
+            </div>
+            <div class="field" data-auth="basic">
+              <label for="auth-user">Username</label>
+              <input id="auth-user" spellcheck="false">
+            </div>
+            <div class="field" data-auth="basic">
+              <label for="auth-pass">Password</label>
+              <input id="auth-pass" type="password" spellcheck="false">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="divider" class="divider"></div>
+
+      <section class="pane res-pane">
+        <div class="tabs" id="res-tabs">
+          <button data-tab="body" class="active">Response</button>
+          <button data-tab="headers">Headers <span class="count"></span></button>
+          <div class="spacer"></div>
+          <div id="res-tools" class="res-tools" hidden>
+            <button id="pretty-toggle" class="ghost small">Raw</button>
+            <button id="copy-body" class="ghost small">Copy</button>
+            <button id="save-body" class="ghost small" title="Save the response body to a file">Save</button>
+          </div>
+          <div id="res-meta" class="res-meta"></div>
+        </div>
+        <div class="tab-body">
+          <div data-panel="body">
+            <div id="res-body" class="res-body">
+              <p class="muted center">Send a request to see the response.<br><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send · <kbd>Ctrl</kbd> + <kbd>S</kbd> to save</p>
+            </div>
+          </div>
+          <div data-panel="headers" hidden>
+            <div id="res-headers"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="env-dialog">
+    <div class="env-wrap">
+      <div class="env-list">
+        <div id="env-items"></div>
+        <button id="env-add" class="ghost small">+ Add environment</button>
+      </div>
+      <div class="env-edit">
+        <div id="env-empty" class="muted center">Create an environment to define variables like <code>{{baseUrl}}</code>.</div>
+        <div id="env-form" hidden>
+          <div class="env-head">
+            <input id="env-name" class="req-name" spellcheck="false" placeholder="Environment name">
+            <button id="env-del" class="ghost small danger">Delete</button>
+          </div>
+          <div id="env-vars"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button id="env-close">Done</button>
+    </div>
+  </dialog>
+
+  <dialog id="curl-dialog">
+    <div class="curl-body">
+      <div class="dialog-title">Import cURL</div>
+      <textarea id="curl-text" class="code" spellcheck="false" placeholder="curl https://api.example.com/users -H 'Accept: application/json'"></textarea>
+      <div id="curl-error" class="curl-error" hidden></div>
+    </div>
+    <div class="dialog-foot">
+      <button id="curl-cancel" class="ghost">Cancel</button>
+      <button id="curl-ok" class="primary">Import</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="curl.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
